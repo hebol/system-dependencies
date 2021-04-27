@@ -1,0 +1,1 @@
+cat Integrationer\ NDLP\ inkl\ länkar\ och\ webbtjänster.csv | awk 'BEGIN{FS=";"; q="\042"} NR<=200 && NF > 5 {print "{" q"fromSystem"q ":" q$4q ", " q"toSystem"q ":" q$5q ", " q"dataType"q ":" q$3q"},"}'

@@ -1,0 +1,4 @@
+[
+  {"fromSystem": "apa","toSystem": "bepa", "dataType": "info"},
+  {"fromSystem": "bepa","toSystem": "cepa", "dataType": "info2"}
+]
