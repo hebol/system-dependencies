@@ -5,7 +5,41 @@ $(document).ready(function() {
   const canvas = new fabric.Canvas('graphArea', {selection: false});
 
   const layoutGraph = () => {
+    function posDif(systemCenter, aPos, rest) {
+      let dx2 = (systemCenter.x - aPos.x) ** 2;
+      let dy2 = (systemCenter.y - aPos.y) ** 2;
+      const distance2 = dx2 + dy2;
+      rest.dx += systemCenter.x > aPos.x ? distance2 - dx2 : dx2 - distance2;
+      rest.dy += systemCenter.y > aPos.y ? distance2 - dy2 : dy2 - distance2;
+      return rest;
+    }
 
+    Object.values(systemMap).forEach(currentSystem => {
+      function calculateXYDiff(systemCenter) {
+        return (rest, aPos) => {
+          return posDif(systemCenter, aPos, rest);
+        };
+      }
+
+      const push = Object.values(systemMap)
+        .filter(sys => sys !== currentSystem)
+        .map(sys => sys.getCenterPoint())
+        .reduce(calculateXYDiff(currentSystem.getCenterPoint()), {dx:0, dy:0});
+
+      const pull = findAffectedRelations(currentSystem)
+        .reduce((rest, rel) => {
+          return posDif(rel.source.getCenterPoint(), rel.destination.getCenterPoint(), rest);
+        }, {dx:0, dy:0});
+
+      console.log({system: currentSystem, push, pull});
+    })
+    // För varje system:
+    // 1. räkna ut avståndet => omvänd kraft 1/d^2
+    // 2. dela upp i x, resp y komponent
+
+    // För varje kopplad relation:
+    // 1. räkna ut avståndet => kraft d^2
+    // 2. dela upp i x, resp y komponent
   }
 
   const $button = $('<button>Layout</button>').click(layoutGraph);
@@ -78,7 +112,7 @@ $(document).ready(function() {
   }
 
 
-  $.getJSON('systems')
+  $.getJSON('systems/org')
     .done(function(data) {
       data.forEach(node => {
         createRelation(node);
