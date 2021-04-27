@@ -31,8 +31,19 @@ $(document).ready(function() {
           return posDif(rel.source.getCenterPoint(), rel.destination.getCenterPoint(), rest);
         }, {dx:0, dy:0});
 
-      console.log({system: currentSystem, push, pull});
+      const pullFactor = parseFloat($('#pullFactor').val());
+      const pushFactor = parseFloat($('#pushFactor').val());
+      if (pushFactor && pullFactor) {
+        let dx = Math.sqrt(push.dx) / pushFactor;
+        let dy = Math.sqrt(push.dy) / pushFactor;
+        console.log({left: currentSystem.left, dx, top: currentSystem.top, dy});
+        //currentSystem.left += dx;
+        //currentSystem.top += dy;
+      }
+
+      console.log({system: currentSystem, push, pull, pullFactor, pushFactor});
     })
+    canvas.renderAll();
     // För varje system:
     // 1. räkna ut avståndet => omvänd kraft 1/d^2
     // 2. dela upp i x, resp y komponent
@@ -43,7 +54,10 @@ $(document).ready(function() {
   }
 
   const $button = $('<button>Layout</button>').click(layoutGraph);
-  $('body').append($button);
+  let $body = $('body');
+  $body.append($button);
+  $body.append('<label for="pushFactor">Push</label><input type="number" id="pushFactor" value="100">');
+  $body.append('<label for="pullFactor">Pull</label><input type="number" id="pullFactor" value="100">');
 
   const Edge = fabric.util.createClass(fabric.Line, {
     type: 'edge',
