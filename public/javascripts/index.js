@@ -5,44 +5,64 @@ $(document).ready(function() {
   const canvas = new fabric.Canvas('graphArea', {selection: false});
 
   const layoutGraph = () => {
-    function posDif(systemCenter, aPos, rest) {
-      let dx2 = (systemCenter.x - aPos.x) ** 2;
-      let dy2 = (systemCenter.y - aPos.y) ** 2;
-      const distance2 = dx2 + dy2;
-      rest.dx += systemCenter.x > aPos.x ? distance2 - dx2 : dx2 - distance2;
-      rest.dy += systemCenter.y > aPos.y ? distance2 - dy2 : dy2 - distance2;
-      return rest;
-    }
+    const pullFactor = parseFloat($('#pullFactor').val());
+    const pushFactor = parseFloat($('#pushFactor').val());
+    if (pushFactor && pullFactor) {
+      function posDif(systemCenter, aPos, isPush, rest) {
+        let dx2 = (systemCenter.x - aPos.x) ** 2;
+        let dy2 = (systemCenter.y - aPos.y) ** 2;
+        const distance2 = dx2 + dy2;
+        let force;
+        if (isPush) {
+          force = 1 / distance2 * pushFactor;
+        } else {
+          force = distance2 * pullFactor;
+        }
+        const returnValue = {
+          dx: rest.dx + force * (systemCenter.x > aPos.x ?  dx2 : -dx2) / distance2,
+          dy: force * (systemCenter.y > aPos.y ?  dy2 : -dy2) / distance2
+        };
+        //console.log("posDif", {dx:returnValue.dx, dy:returnValue.dy, dx2, dy2, distance2, isPush: isPush, force});
+        return returnValue;
+      }
 
-    Object.values(systemMap).forEach(currentSystem => {
+      const forceMap = {};
       function calculateXYDiff(systemCenter) {
         return (rest, aPos) => {
-          return posDif(systemCenter, aPos, rest);
+          return posDif(systemCenter, aPos, true, rest);
         };
       }
+      Object.values(systemMap).forEach(currentSystem => {
+        let force = Object.values(systemMap)
+          .filter(sys => sys !== currentSystem)
+          .map(sys => sys.getCenterPoint())
+          .reduce(calculateXYDiff(currentSystem.getCenterPoint()), {dx:0, dy:0});
 
-      const push = Object.values(systemMap)
-        .filter(sys => sys !== currentSystem)
-        .map(sys => sys.getCenterPoint())
-        .reduce(calculateXYDiff(currentSystem.getCenterPoint()), {dx:0, dy:0});
+        force = findAffectedRelations(currentSystem)
+          .reduce((rest, rel) => {
+            let point1 = rel.source === currentSystem ? rel.destination.getCenterPoint() : rel.source.getCenterPoint();
+            let point2 = rel.source === currentSystem ? rel.source.getCenterPoint() : rel.destination.getCenterPoint();
+            return posDif(point1, point2, false, rest);
+          }, force);
+        forceMap[currentSystem.get('label')] = force;
+      });
+      console.log({forceMap});
+      Object.keys(forceMap).forEach(systemName => {
+        const force = forceMap[systemName];
+        let dx = Math.sqrt(Math.abs(force.dx));
+        let dy = Math.sqrt(Math.abs(force.dy));
+        dx = force.dx < 0 ? -dx : dx;
+        dy = force.dy < 0 ? -dy : dy;
 
-      const pull = findAffectedRelations(currentSystem)
-        .reduce((rest, rel) => {
-          return posDif(rel.source.getCenterPoint(), rel.destination.getCenterPoint(), rest);
-        }, {dx:0, dy:0});
-
-      const pullFactor = parseFloat($('#pullFactor').val());
-      const pushFactor = parseFloat($('#pushFactor').val());
-      if (pushFactor && pullFactor) {
-        let dx = Math.sqrt(push.dx) / pushFactor;
-        let dy = Math.sqrt(push.dy) / pushFactor;
-        console.log({left: currentSystem.left, dx, top: currentSystem.top, dy});
-        //currentSystem.left += dx;
-        //currentSystem.top += dy;
+        const currentSystem = systemMap[systemName];
+        console.log({label: currentSystem.get('label'), left: currentSystem.left, dx, top: currentSystem.top, dy});
+        currentSystem.left += dx;
+        currentSystem.top  += dy;
+        currentSystem.setCoords();
+        findAffectedRelations(currentSystem).forEach(rel => rel.updatePosition());
+      });
       }
 
-      console.log({system: currentSystem, push, pull, pullFactor, pushFactor});
-    })
     canvas.renderAll();
     // För varje system:
     // 1. räkna ut avståndet => omvänd kraft 1/d^2
@@ -56,8 +76,8 @@ $(document).ready(function() {
   const $button = $('<button>Layout</button>').click(layoutGraph);
   let $body = $('body');
   $body.append($button);
-  $body.append('<label for="pushFactor">Push</label><input type="number" id="pushFactor" value="100">');
-  $body.append('<label for="pullFactor">Pull</label><input type="number" id="pullFactor" value="100">');
+  $body.append('<label for="pushFactor">Push</label><input type="number" id="pushFactor" value="100000">');
+  $body.append('<label for="pullFactor">Pull</label><input type="number" id="pullFactor" value="0.0001">');
 
   const Edge = fabric.util.createClass(fabric.Line, {
     type: 'edge',
@@ -98,7 +118,6 @@ $(document).ready(function() {
     }
   });
 
-
   function createRelation(rel) {
     const sys1 = createSystem(rel.fromSystem);
     const sys2 = createSystem(rel.toSystem);
@@ -119,6 +138,7 @@ $(document).ready(function() {
         lockScalingX: true, lockScalingY:true
       });
       result = new fabric.Group([rect, text], { left: Math.random() * 300, top: Math.random() * 300});
+      result.set('label', systemName);
       systemMap[systemName] = result;
       canvas.add(result);
     }
@@ -126,7 +146,7 @@ $(document).ready(function() {
   }
 
 
-  $.getJSON('systems/org')
+  $.getJSON('systems')
     .done(function(data) {
       data.forEach(node => {
         createRelation(node);

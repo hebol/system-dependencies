@@ -1,6 +1,3 @@
 [
-  {"fromSystem": "apa","toSystem": "bepa", "dataType": "info1"},
-  {"fromSystem": "apa","toSystem": "depa", "dataType": "info3"},
-  {"fromSystem": "bepa","toSystem": "depa", "dataType": "info4"},
   {"fromSystem": "bepa","toSystem": "cepa", "dataType": "info2"}
 ]
