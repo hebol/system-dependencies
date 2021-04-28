@@ -20,7 +20,7 @@ $(document).ready(function() {
         }
         const returnValue = {
           dx: rest.dx + force * (systemCenter.x > aPos.x ?  dx2 : -dx2) / distance2,
-          dy: force * (systemCenter.y > aPos.y ?  dy2 : -dy2) / distance2
+          dy: rest.dy + force * (systemCenter.y > aPos.y ?  dy2 : -dy2) / distance2
         };
         //console.log("posDif", {dx:returnValue.dx, dy:returnValue.dy, dx2, dy2, distance2, isPush: isPush, force});
         return returnValue;
